@@ -89,6 +89,12 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import axios from 'axios'
+
+// Тестовый адрес для отправки формы.
+// Чтобы проверить ошибку сервера, можно поменять адрес на несуществующий,
+// например 'https://jsonplaceholder.typicode.com/wrong-url' - сервер ответит кодом 404
+const API_URL = 'https://jsonplaceholder.typicode.com/users'
 
 const isLoading = ref(false)
 const successMessage = ref('')
@@ -220,7 +226,7 @@ const validate = () => {
   return !errors.name && !errors.email && !errors.password && !errors.confirmPassword
 }
 
-const handleSubmit = async (event) => {
+const handleSubmit = (event) => {
   event.preventDefault() // предотвращаем перезагрузку страницы
 
   successMessage.value = ''
@@ -232,36 +238,45 @@ const handleSubmit = async (event) => {
 
   isLoading.value = true
 
-  try {
-    const payload = {
-      name: form.name.trim(),
-      email: form.email.trim(),
-      password: form.password,
-      confirmPassword: form.confirmPassword // на бэкенд обычно не отправляют confirmPassword
-    }
-
-    // Вариант 1: fetch (нативно)
-    // api чисто для примера, т.е. тут должна проводиться проверка на бэке
-    const response = await fetch('https://jsonplaceholder.typicode.com/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
-
-    if (!response.ok) {
-      throw new Error(`Ошибка сервера: ${response.status}`)
-    }
-
-    const data = await response.json()
-    successMessage.value =
-      'Регистрация успешно отправлена (демо). Данные: ' + JSON.stringify(data, null, 2)
-  } catch (err) {
-    generalError.value = err instanceof Error ? err.message : 'Произошла ошибка при отправке.'
-  } finally {
-    isLoading.value = false
+  // confirmPassword на сервер не отправляем - он нужен только для проверки на странице
+  const payload = {
+    name: form.name.trim(),
+    email: form.email.trim(),
+    password: form.password
   }
+
+  // api чисто для примера, т.е. настоящая проверка данных должна быть на бэкенде.
+  // axios сам превращает объект в JSON и ставит заголовок Content-Type
+  axios
+    .post(API_URL, payload)
+    .then((response) => {
+      // axios сам разбирает ответ из JSON, данные лежат в response.data
+      successMessage.value =
+        'Регистрация успешно отправлена (демо). Ответ сервера: ' +
+        JSON.stringify(response.data, null, 2)
+    })
+    .catch((err) => {
+      if (err.response) {
+        // 1) Ошибка сервера: сервер ответил, но с кодом ошибки (4xx или 5xx).
+        // axios сам выбрасывает ошибку на такие коды, статус лежит в err.response.status
+        const status = err.response.status
+        if (status >= 500) {
+          generalError.value = `Ошибка на сервере (код ${status}). Попробуйте позже.`
+        } else {
+          generalError.value = `Сервер отклонил запрос (код ${status}). Проверьте данные.`
+        }
+      } else if (err.request) {
+        // 2) Ошибка сети: запрос ушёл, но ответа нет (нет интернета или сервер недоступен)
+        generalError.value = 'Ошибка сети: нет связи с сервером. Проверьте подключение к интернету.'
+      } else {
+        // 3) Ошибка ещё до отправки запроса
+        generalError.value = 'Не удалось отправить запрос: ' + err.message
+      }
+    })
+    .finally(() => {
+      // finally выполняется всегда - и при успехе, и при ошибке
+      isLoading.value = false
+    })
 }
 </script>
 
