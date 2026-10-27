@@ -8,12 +8,15 @@
       <div class="form-group">
         <!-- for у label совпадает с id у input: клик по подписи ставит курсор в поле -->
         <label for="name">Имя</label>
+        <!-- @blur - пользователь ушёл с поля, @input - ввёл или стёр символ -->
         <input
           id="name"
           v-model="form.name"
           type="text"
           class="form-input"
           :class="{ 'input-error': errors.name }"
+          @blur="onBlur('name')"
+          @input="onInput('name')"
         />
         <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
       </div>
@@ -27,6 +30,8 @@
           type="email"
           class="form-input"
           :class="{ 'input-error': errors.email }"
+          @blur="onBlur('email')"
+          @input="onInput('email')"
         />
         <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
       </div>
@@ -40,6 +45,8 @@
           type="password"
           class="form-input"
           :class="{ 'input-error': errors.password }"
+          @blur="onBlur('password')"
+          @input="onInput('password')"
         />
         <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
         <span v-else class="hint">
@@ -56,6 +63,8 @@
           type="password"
           class="form-input"
           :class="{ 'input-error': errors.confirmPassword }"
+          @blur="onBlur('confirmPassword')"
+          @input="onInput('confirmPassword')"
         />
         <span v-if="errors.confirmPassword" class="error-message">
           {{ errors.confirmPassword }}
@@ -102,7 +111,35 @@ const errors = reactive({
   confirmPassword: null
 })
 
-// Проверка сложности пароля. Возвращает текст ошибки или null, если пароль подходит.
+// touched - "трогал ли пользователь поле": становится true, когда он ушёл с поля (blur)
+const touched = reactive({
+  name: false,
+  email: false,
+  password: false,
+  confirmPassword: false
+})
+
+// ===== Проверки полей =====
+// Каждая функция проверяет одно поле и возвращает текст ошибки или null, если всё хорошо
+
+// Имя: не пустое, длина >= 2
+const checkName = () => {
+  if (form.name.trim().length < 2) {
+    return 'Имя должно быть не короче 2 символов.'
+  }
+  return null
+}
+
+// Email: простой формат что-то@что-то.что-то
+const checkEmail = () => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.email)) {
+    return 'Введите корректный email.'
+  }
+  return null
+}
+
+// Пароль: 8 символов, строчные и заглавные буквы, цифры и спецсимволы.
 // /[a-z]/.test(строка) - есть ли в строке хотя бы один символ из квадратных скобок
 const checkPassword = () => {
   const password = form.password
@@ -126,45 +163,61 @@ const checkPassword = () => {
   return null
 }
 
-// Простая валидация
-const validate = () => {
-  // Сброс ошибок. Object.keys(errors) - массив названий полей ['name', 'email', ...]
-  Object.keys(errors).forEach((key) => {
-    errors[key] = null
-  })
-  let hasErrors = false
-
-  // Имя: не пустое, длина >= 2
-  if (!form.name || form.name.trim().length < 2) {
-    errors.name = 'Имя должно быть не короче 2 символов.'
-    hasErrors = true
+// Подтверждение пароля: не пустое и совпадает с паролем
+const checkConfirmPassword = () => {
+  if (!form.confirmPassword) {
+    return 'Подтвердите пароль.'
   }
-
-  // Email: не пустой, простой формат что-то@что-то.что-то
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!form.email || !emailRegex.test(form.email)) {
-    errors.email = 'Введите корректный email.'
-    hasErrors = true
-  }
-
-  // Пароль: 8 символов, строчные и заглавные буквы, цифры и спецсимволы
-  const passwordError = checkPassword()
-  if (passwordError) {
-    errors.password = passwordError
-    hasErrors = true
-  }
-
-  // Подтверждение пароля: совпадает с паролем
   if (form.password !== form.confirmPassword) {
-    errors.confirmPassword = 'Пароли не совпадают.'
-    hasErrors = true
-  } else if (!form.confirmPassword && form.password) {
-    // Если пароль заполнен, а подтверждение пустое
-    errors.confirmPassword = 'Подтвердите пароль.'
-    hasErrors = true
+    return 'Пароли не совпадают.'
   }
+  return null
+}
 
-  return !hasErrors
+// Проверить одно поле и записать результат в errors
+const validateField = (field) => {
+  if (field === 'name') {
+    errors.name = checkName()
+  } else if (field === 'email') {
+    errors.email = checkEmail()
+  } else if (field === 'password') {
+    errors.password = checkPassword()
+    // пароль поменяли - подтверждение тоже надо перепроверить (если его уже вводили)
+    if (touched.confirmPassword) {
+      errors.confirmPassword = checkConfirmPassword()
+    }
+  } else if (field === 'confirmPassword') {
+    errors.confirmPassword = checkConfirmPassword()
+  }
+}
+
+// ===== "Живая" валидация =====
+
+// Ушли с поля - отмечаем его как "тронутое" и сразу показываем ошибку
+const onBlur = (field) => {
+  touched[field] = true
+  validateField(field)
+}
+
+// Вводим текст - проверяем только "тронутые" поля.
+// Так ошибка не выскакивает после первой же буквы,
+// но сразу исчезает, как только пользователь её исправил
+const onInput = (field) => {
+  if (touched[field]) {
+    validateField(field)
+  }
+}
+
+// Проверка всей формы перед отправкой.
+// Object.keys(form) - массив названий полей: ['name', 'email', 'password', 'confirmPassword']
+const validate = () => {
+  Object.keys(form).forEach((field) => {
+    touched[field] = true
+    validateField(field)
+  })
+
+  // форма правильная, только если ни в одном поле нет ошибки
+  return !errors.name && !errors.email && !errors.password && !errors.confirmPassword
 }
 
 const handleSubmit = async (event) => {
