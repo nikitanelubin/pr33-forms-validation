@@ -183,3 +183,98 @@ const handleSubmit = async (event) => {
   }
 }
 </script>
+
+<style scoped>
+.form-page {
+  max-width: 420px;
+  margin: 40px auto;
+  padding: 25px 30px;
+  border-radius: 10px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.form-group {
+  /* label, input и ошибка друг под другом */
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+}
+
+/* :focus - поле, в котором сейчас курсор */
+.form-input:focus {
+  border-color: #42b983;
+  outline: none;
+}
+
+/* поле с ошибкой - красная рамка */
+.form-input.input-error {
+  border-color: #e53935;
+  background-color: #fff5f5;
+}
+
+.error-message {
+  margin-top: 4px;
+  color: #e53935;
+  font-size: 13px;
+}
+
+.general-error {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #e57373;
+  border-radius: 6px;
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: #42b983;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btn-submit:hover {
+  background-color: #369870;
+}
+
+/* :disabled - кнопка выключена, пока идёт отправка */
+.btn-submit:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+.success-message {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #81c784;
+  border-radius: 6px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  /* pre-wrap сохраняет переносы строк и отступы (чтобы JSON был читаемым) */
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+</style>
