@@ -42,6 +42,9 @@
           :class="{ 'input-error': errors.password }"
         />
         <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
+        <span v-else class="hint">
+          Минимум 8 символов: строчные и заглавные буквы, цифры и спецсимволы
+        </span>
       </div>
 
       <!-- Подтверждение пароля -->
@@ -99,6 +102,30 @@ const errors = reactive({
   confirmPassword: null
 })
 
+// Проверка сложности пароля. Возвращает текст ошибки или null, если пароль подходит.
+// /[a-z]/.test(строка) - есть ли в строке хотя бы один символ из квадратных скобок
+const checkPassword = () => {
+  const password = form.password
+
+  if (password.length < 8) {
+    return 'Пароль должен быть не короче 8 символов.'
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Добавьте строчную латинскую букву (a-z).'
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Добавьте заглавную латинскую букву (A-Z).'
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Добавьте цифру.'
+  }
+  // ^ внутри [ ] значит "НЕ": ищем символ, который не буква и не цифра - это и есть спецсимвол
+  if (!/[^a-zA-Z0-9]/.test(password)) {
+    return 'Добавьте спецсимвол (например ! @ # $ %).'
+  }
+  return null
+}
+
 // Простая валидация
 const validate = () => {
   // Сброс ошибок. Object.keys(errors) - массив названий полей ['name', 'email', ...]
@@ -120,9 +147,10 @@ const validate = () => {
     hasErrors = true
   }
 
-  // Пароль: не пустой, длина >= 6
-  if (!form.password || form.password.length < 6) {
-    errors.password = 'Пароль должен быть не короче 6 символов.'
+  // Пароль: 8 символов, строчные и заглавные буквы, цифры и спецсимволы
+  const passwordError = checkPassword()
+  if (passwordError) {
+    errors.password = passwordError
     hasErrors = true
   }
 
@@ -233,6 +261,13 @@ label {
 .error-message {
   margin-top: 4px;
   color: #e53935;
+  font-size: 13px;
+}
+
+/* подсказка под полем пароля */
+.hint {
+  margin-top: 4px;
+  color: #888;
   font-size: 13px;
 }
 
